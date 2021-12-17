@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.exc.StreamWriteException;
 import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.fillikos.rf2.server.tool.model.LocalTempSpeicher;
+import de.fillikos.rf2.server.tool.model.RF2Server;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.List;
 
 public class LocalSpeicher {
 
@@ -61,5 +63,25 @@ public class LocalSpeicher {
 
     public String getTmpdir() {
         return tmpdir;
+    }
+
+    public String getPort(Object selectedItem) {
+        List<RF2Server> serverList = localTempSpeicher.getServerListe();
+        for(RF2Server s: serverList) {
+            if(selectedItem.equals(s.getServerName())) {
+                return s.getPort();
+            }
+        }
+        return "";
+    }
+
+    public String getAdresse(Object selectedItem) {
+        List<RF2Server> serverList = localTempSpeicher.getServerListe();
+        for(RF2Server s: serverList) {
+            if(selectedItem.equals(s.getServerName())) {
+                return s.getIp();
+            }
+        }
+        return "";
     }
 }
