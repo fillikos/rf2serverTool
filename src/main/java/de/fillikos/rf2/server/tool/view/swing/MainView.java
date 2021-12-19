@@ -3,16 +3,20 @@ package de.fillikos.rf2.server.tool.view.swing;
 import de.fillikos.rf2.server.tool.model.RF2Server;
 import de.fillikos.rf2.server.tool.view.swing.speicher.LocalSpeicher;
 import de.fillikos.rf2.server.tool.view.swing.table.model.TableModelLiveView;
+import de.fillikos.rf2.server.tool.view.swing.tools.RF2Tools;
 import de.fillikos.rf2.service.webui.httpss.Connection;
 import de.fillikos.rf2.service.webui.httpss.model.SessionInfo;
 import de.fillikos.rf2.service.webui.httpss.model.User;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class MainView {
 
@@ -27,6 +31,7 @@ public class MainView {
     private ArrayList<String[]> list = new ArrayList<String[]>();
     private JLabel txtServerName;
     private TableModelLiveView tabModelLiveView;
+    private DefaultTableModel tableModel;
 
     public MainView() {
         frame.setTitle("rF2 Server Tool");
@@ -47,6 +52,7 @@ public class MainView {
 
     private void panWest() {
         JPanel panWest = new JPanel();
+        panWest.setBorder(BorderFactory.createEtchedBorder());
         panWest.setLayout(new BoxLayout(panWest, BoxLayout.PAGE_AXIS));
 
         txtServerName = new JLabel("Servername: " + sessionInfo.getServerName());
@@ -58,36 +64,51 @@ public class MainView {
 
     private void panCenter() {
         JPanel panCenter = new JPanel();
+        panCenter.setLayout(new BorderLayout());
+        panCenter.setBorder(BorderFactory.createEtchedBorder());
 
-        String[] columns = new String[]{"N1ame", "T1est", "D1atum"};
-        String[] fa = new String[]{"N1ame", "Test", "Datum"};
-        String[] da = new String[]{"N2ame", "Test", "Datum"};
-        String[] aa = new String[]{"N3ame", "Test", "Datum"};
-
+        String[] columns = new String[]{"Pos", "Team", "Fahrer", "Laps", "Fastest Lap", "Last Lap", "S1", "S2", "S3", "PIT"};
+        String[] fa = new String[]{"N1ame", "Test", "Datum", "N1ame", "Test", "Datum"};
+        String[] da = new String[]{"N2ame", "Test", "Datum", "N1ame", "Test", "Datum"};
+        String[] aa = new String[]{"N3ame", "Test", "Datum", "N1ame", "Test", "Datum"};
 
         list.add(fa);
         list.add(da);
 
-        tabModelLiveView = new TableModelLiveView(columns);
+//        tabModelLiveView = new TableModelLiveView(columns);
+//        tabModelLiveView.addAll(list);
+//        JTable tabLiveView = new JTable(tabModelLiveView);
 
-        tabModelLiveView.addAll(list);
-
-        JTable tabLiveView = new JTable(tabModelLiveView);
+        tableModel = new DefaultTableModel(columns,0);
+        for(String[] s: list) {
+            tableModel.addRow(Arrays.stream(s).toArray());
+        }
+        JTable tabLiveView = new JTable(tableModel);
+        tabLiveView.setRowHeight(32);
+        TableColumn column = null;
+        for(int i = 0; i < columns.length; i++) {
+            column = tabLiveView.getColumnModel().getColumn(i);
+            int width = 0;
+            switch (i) {
+                case 0: width = 10; break;
+                case 1: width = 150; break;
+                case 2: width = 100; break;
+                case 3: width = 10; break;
+                case 4: width = 50; break;
+                case 5: width = 50; break;
+                case 6: width = 50; break;
+                case 7: width = 50; break;
+                case 8: width = 50; break;
+                case 9: width = 10; break;
+                case 10: width = 10; break;
+                default: width = 7; break;
+            }
+            column.setPreferredWidth(width);
+        }
+        tabLiveView.setAutoCreateRowSorter(true);
         JScrollPane scrPane = new JScrollPane(tabLiveView);
-        panCenter.add(scrPane);
+        panCenter.add(scrPane, BorderLayout.CENTER);
         conMain.add(panCenter, BorderLayout.CENTER);
-
-//        JButton btnNew = new JButton("New");
-//        btnNew.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                list.add(aa);
-//                tabModelLiveView.removeAllElements();
-//                tabModelLiveView.addAll(list);
-//            }
-//        });
-//
-//        conMain.add(btnNew,BorderLayout.WEST);
     }
 
     private void panNorth() {
@@ -153,9 +174,11 @@ public class MainView {
 
     private void loadServerSessionInfo() {
         while(loadServer) {
+            long start = System.currentTimeMillis();
             con.loadData();
             sessionInfo = con.getSessionInfo();
             standings = con.getStandings();
+
             txtServerName.setText("<html><body>" +
                     "Servername: " + sessionInfo.getServerName() + "<br>" +
                     "Session: " + sessionInfo.getSession() + "<br>" +
@@ -163,11 +186,25 @@ public class MainView {
                     "SessionZeit: " + rf2CETToTime(sessionInfo.getCurrentEventTime()) + "<br>" +
                     "</body></html>");
             list.clear();
+
+            // Fahrzeugklassenermittlung
+            ArrayList<String> klassen = new ArrayList<String>();
             for(User u: standings) {
-                list.add(new String[]{u.getDriverName(), u.getLapDistance(), u.getFullTeamName()});
+                if(!klassen.contains(u.getCarClass())) {
+                    klassen.add(u.getCarClass());
+                }
             }
-            tabModelLiveView.removeAllElements();
-            tabModelLiveView.addAll(list);
+
+            for(User u: standings) {
+                list.add(RF2Tools.user2TableView(u));
+            }
+
+            tableModel.setRowCount(0);
+            for(String[] s: list) {
+                tableModel.addRow(Arrays.stream(s).toArray());
+            }
+//            tableModel.fireTableDataChanged();
+            System.out.println(System.currentTimeMillis() - start + " ms");
             try {
                 Thread.sleep(950);
             } catch (InterruptedException e) {
